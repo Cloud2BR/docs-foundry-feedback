@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Docs Foundry feedback page
+    url: https://cloud2br.github.io/docs-foundry/feedback.html
+    about: Use the hosted feedback form to start with a prepopulated request.
+  - name: Docs Foundry roadmap
+    url: https://cloud2br.github.io/docs-foundry/roadmap.html
+    about: Review shipped work and planned delivery windows before filing roadmap requests.
+  - name: Docs Foundry source repository
+    url: https://github.com/Cloud2BR/docs-foundry
+    about: Visit the product repository for source code, releases, and implementation work.

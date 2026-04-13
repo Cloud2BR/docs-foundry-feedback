@@ -1,0 +1,41 @@
+name: Roadmap feedback
+description: Suggest a roadmap, ETA, priority, or milestone change for Docs Foundry.
+title: "[Roadmap] "
+labels:
+  - needs-triage
+  - kind:roadmap
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for release planning, ETA feedback, sequencing suggestions, and milestone changes.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What should change on the roadmap?
+      description: Describe the feature, priority, milestone, or ETA change you want to suggest.
+      placeholder: Explain the roadmap change clearly.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Why should it move?
+      description: Explain the product, user, or release impact behind this suggestion.
+      placeholder: Describe why this priority or ETA should change.
+    validations:
+      required: true
+  - type: textarea
+    id: next
+    attributes:
+      label: What should happen next?
+      description: Describe the timeline, priority, or release outcome you want considered.
+      placeholder: Explain your recommended next step.
+    validations:
+      required: true
+  - type: input
+    id: context
+    attributes:
+      label: Optional context link or contact
+      description: Add a reference URL, screenshot link, or GitHub handle if useful.
+      placeholder: https://example.com or @github-handle

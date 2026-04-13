@@ -1,0 +1,41 @@
+name: Feature request
+description: Suggest a new capability, workflow, or integration for Docs Foundry.
+title: "[Feature] "
+labels:
+  - needs-triage
+  - kind:feature
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for net-new capabilities or major workflow additions.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What do you want added?
+      description: Describe the capability, workflow, or integration you want to see.
+      placeholder: Add a concise description of the requested feature.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Why does it matter?
+      description: Explain the user problem, customer value, or workflow gap.
+      placeholder: Describe the impact of not having this feature today.
+    validations:
+      required: true
+  - type: textarea
+    id: success
+    attributes:
+      label: What would success look like?
+      description: Share expected outcomes, acceptance criteria, or example behavior.
+      placeholder: Describe the ideal result.
+    validations:
+      required: true
+  - type: input
+    id: context
+    attributes:
+      label: Optional context link or contact
+      description: Add a reference URL, screenshot link, or GitHub handle if useful.
+      placeholder: https://example.com or @github-handle

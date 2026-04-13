@@ -1,0 +1,83 @@
+name: Bootstrap Feedback Labels
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/**
+      - .github/ISSUE_TEMPLATE/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure feedback labels exist
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const labels = [
+              {
+                name: 'needs-triage',
+                color: 'BFDADC',
+                description: 'New feedback waiting for review'
+              },
+              {
+                name: 'kind:feature',
+                color: '0E8A16',
+                description: 'Feedback categorized as feature'
+              },
+              {
+                name: 'kind:improve',
+                color: '1D76DB',
+                description: 'Feedback categorized as improve'
+              },
+              {
+                name: 'kind:docs',
+                color: '5319E7',
+                description: 'Feedback categorized as docs'
+              },
+              {
+                name: 'kind:roadmap',
+                color: 'FBCA04',
+                description: 'Feedback categorized as roadmap'
+              },
+              {
+                name: 'source:pages',
+                color: 'C2E0C6',
+                description: 'Feedback submitted from the hosted Docs Foundry feedback page'
+              },
+              {
+                name: 'source:repo',
+                color: 'D4C5F9',
+                description: 'Feedback created directly in the repository'
+              }
+            ];
+
+            for (const label of labels) {
+              try {
+                await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label.name
+                });
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
+                }
+
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label.name,
+                  color: label.color,
+                  description: label.description
+                });
+              }
+            }

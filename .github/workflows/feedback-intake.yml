@@ -1,0 +1,189 @@
+name: Feedback Intake
+
+on:
+  issues:
+    types:
+      - opened
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  intake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Detect category and ensure labels
+        id: intake
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = context.payload.issue;
+            const body = issue.body || '';
+            const title = issue.title || '';
+            const currentLabels = issue.labels.map((label) => label.name);
+
+            function normalizeCategory(value) {
+              const normalized = (value || '').trim().toLowerCase();
+              return ['feature', 'improve', 'docs', 'roadmap'].includes(normalized)
+                ? normalized
+                : 'unknown';
+            }
+
+            function detectCategory() {
+              const metadataMatch = body.match(/<!-- docfoundry-feedback([\s\S]*?)-->/);
+              if (metadataMatch) {
+                const categoryMatch = metadataMatch[1].match(/category:\s*([^\n]+)/);
+                if (categoryMatch) {
+                  return normalizeCategory(categoryMatch[1]);
+                }
+              }
+
+              const kindLabel = currentLabels.find((label) => label.startsWith('kind:'));
+              if (kindLabel) {
+                return normalizeCategory(kindLabel.slice('kind:'.length));
+              }
+
+              const titleMatch = title.match(/^\[(Feature|Improve|Docs|Roadmap)\]/i);
+              if (titleMatch) {
+                return normalizeCategory(titleMatch[1]);
+              }
+
+              const bodyTypeMatch = body.match(/## Request type\s*\n+([^\n]+)/i);
+              if (bodyTypeMatch) {
+                return normalizeCategory(bodyTypeMatch[1]);
+              }
+
+              return 'unknown';
+            }
+
+            async function ensureLabel(spec) {
+              try {
+                await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: spec.name
+                });
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
+                }
+
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: spec.name,
+                  color: spec.color,
+                  description: spec.description
+                });
+              }
+            }
+
+            const category = detectCategory();
+            const fromPages = body.includes('docfoundry-feedback');
+            const sourceLabel = fromPages ? 'source:pages' : 'source:repo';
+            const categoryColors = {
+              feature: '0E8A16',
+              improve: '1D76DB',
+              docs: '5319E7',
+              roadmap: 'FBCA04',
+              unknown: '6E7781'
+            };
+
+            const labelSpecs = [
+              {
+                name: 'needs-triage',
+                color: 'BFDADC',
+                description: 'New feedback waiting for review'
+              },
+              {
+                name: sourceLabel,
+                color: fromPages ? 'C2E0C6' : 'D4C5F9',
+                description: fromPages ? 'Feedback submitted from the hosted Docs Foundry feedback page' : 'Feedback created directly in the repository'
+              }
+            ];
+
+            if (category !== 'unknown') {
+              labelSpecs.push({
+                name: `kind:${category}`,
+                color: categoryColors[category],
+                description: `Feedback categorized as ${category}`
+              });
+            }
+
+            for (const spec of labelSpecs) {
+              await ensureLabel(spec);
+            }
+
+            const labelsToAdd = labelSpecs
+              .map((spec) => spec.name)
+              .filter((name) => !currentLabels.includes(name));
+
+            if (labelsToAdd.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: labelsToAdd
+              });
+            }
+
+            core.setOutput('category', category);
+            core.setOutput('source', fromPages ? 'pages' : 'repo');
+
+      - name: Assign maintainers
+        if: ${{ vars.FEEDBACK_ASSIGNEES != '' }}
+        uses: actions/github-script@v7
+        env:
+          FEEDBACK_ASSIGNEES: ${{ vars.FEEDBACK_ASSIGNEES }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const assignees = (process.env.FEEDBACK_ASSIGNEES || '')
+              .split(',')
+              .map((value) => value.trim())
+              .filter(Boolean);
+
+            if (!assignees.length) {
+              return;
+            }
+
+            await github.rest.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              assignees
+            });
+
+      - name: Post intake confirmation
+        uses: actions/github-script@v7
+        env:
+          FEEDBACK_MENTIONS: ${{ vars.FEEDBACK_MENTIONS }}
+          FEEDBACK_CATEGORY: ${{ steps.intake.outputs.category }}
+          FEEDBACK_SOURCE: ${{ steps.intake.outputs.source }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const mentions = (process.env.FEEDBACK_MENTIONS || '').trim();
+            const category = (process.env.FEEDBACK_CATEGORY || 'unknown').trim();
+            const source = (process.env.FEEDBACK_SOURCE || 'repo').trim();
+
+            const lines = [
+              'Thanks for the feedback. This request has entered the Docs Foundry review queue.',
+              '',
+              `Detected category: ${category}.`,
+              `Submission source: ${source}.`,
+              'Status: needs triage.'
+            ];
+
+            if (mentions) {
+              lines.push('', `cc ${mentions}`);
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: lines.join('\n')
+            });
