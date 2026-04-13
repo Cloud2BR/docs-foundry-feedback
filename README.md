@@ -30,9 +30,10 @@ When a new issue is opened, the workflow:
 - detects the request category from hidden Pages metadata, existing labels, title prefixes, or the issue body
 - creates any missing labels that the feedback flow expects
 - applies triage labels such as `needs-triage`, `kind:feature`, `kind:improve`, `kind:docs`, or `kind:roadmap`
-- optionally assigns maintainers from repository variables
+- automatically assigns the default maintainer routing configured in the workflow
 - posts an intake confirmation comment so the request has an immediate status marker
 
+No extra repository variables or token secrets are required for the workflows in this repository. They use the built-in `GITHUB_TOKEN` that already exists in GitHub Actions runs, and feedback is routed automatically to the default maintainer configured in the workflow.
 ## Issue templates
 
 This repo includes issue forms for:
@@ -50,8 +51,7 @@ This repo includes issue forms for:
 1. Keep Issues enabled.
 2. Keep Actions enabled.
 3. Leave the default workflow permissions at read repository contents. The workflow requests explicit `issues: write` permissions for label, assignee, and comment updates.
-4. Add `FEEDBACK_ASSIGNEES` and `FEEDBACK_MENTIONS` if you want automatic routing.
-5. Test the flow from https://cloud2br.github.io/docs-foundry/feedback.html after pushing these files.
+4. Test the flow from https://cloud2br.github.io/docs-foundry/feedback.html after pushing these files.
 
 ## Related links
 

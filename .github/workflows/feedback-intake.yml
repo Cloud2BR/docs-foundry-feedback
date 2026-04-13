@@ -5,6 +5,9 @@ on:
     types:
       - opened
 
+env:
+  DEFAULT_ASSIGNEES: brown9804
+
 permissions:
   contents: read
   issues: write
@@ -133,33 +136,42 @@ jobs:
             core.setOutput('source', fromPages ? 'pages' : 'repo');
 
       - name: Assign maintainers
-        if: ${{ vars.FEEDBACK_ASSIGNEES != '' }}
+        id: assign
         uses: actions/github-script@v7
-        env:
-          FEEDBACK_ASSIGNEES: ${{ vars.FEEDBACK_ASSIGNEES }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const assignees = (process.env.FEEDBACK_ASSIGNEES || '')
+            const existingAssignees = context.payload.issue.assignees.map((user) => user.login);
+            const assignees = (process.env.DEFAULT_ASSIGNEES || '')
               .split(',')
               .map((value) => value.trim())
               .filter(Boolean);
 
-            if (!assignees.length) {
+            const assigneesToAdd = assignees.filter((login) => !existingAssignees.includes(login));
+            const mentionLogins = Array.from(new Set(existingAssignees.concat(assignees)));
+
+            if (!assigneesToAdd.length) {
+              core.setOutput('mentions', mentionLogins.map((login) => `@${login}`).join(' '));
               return;
             }
 
-            await github.rest.issues.addAssignees({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.issue.number,
-              assignees
-            });
+            try {
+              await github.rest.issues.addAssignees({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                assignees: assigneesToAdd
+              });
+            } catch (error) {
+              core.warning(`Could not assign default maintainers: ${error.message}`);
+            }
+
+            core.setOutput('mentions', mentionLogins.map((login) => `@${login}`).join(' '));
 
       - name: Post intake confirmation
         uses: actions/github-script@v7
         env:
-          FEEDBACK_MENTIONS: ${{ vars.FEEDBACK_MENTIONS }}
+          FEEDBACK_MENTIONS: ${{ steps.assign.outputs.mentions }}
           FEEDBACK_CATEGORY: ${{ steps.intake.outputs.category }}
           FEEDBACK_SOURCE: ${{ steps.intake.outputs.source }}
         with:
